@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Tracker & Pipeline Hub (Companies Directory)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @keyframes pulseCheck {
+      0% { transform: scale(0.8); opacity: 0; }
+      50% { transform: scale(1.2); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .check-animate { animation: pulseCheck 0.3s ease-out forwards; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col custom-scrollbar">
+
+  <!-- SECURE AUTH MODAL OVERLAY (USER, ADMIN & SIGN-UP) -->
+  <div id="authOverlay" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-8 shadow-2xl">
+      
+      <!-- TOGGLE PORTAL TYPE -->
+      <div class="flex bg-slate-900 p-1 rounded-xl mb-6 border border-slate-700">
+        <button id="tabUserAuth" onclick="toggleAuthMode('user')" class="flex-1 py-2 text-xs font-bold rounded-lg transition bg-amber-500 text-slate-950 shadow">
+          <i class="fa-solid fa-user mr-1"></i> User Login
+        </button>
+        <button id="tabAdminAuth" onclick="toggleAuthMode('admin')" class="flex-1 py-2 text-xs font-bold text-slate-400 rounded-lg transition hover:text-white">
+          <i class="fa-solid fa-shield-halved mr-1"></i> Admin Portal
+        </button>
+      </div>
+
+      <div class="text-center mb-6">
+        <div id="portalIcon" class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 mb-3 border border-amber-500/30">
+          <i class="fa-solid fa-user text-2xl"></i>
+        </div>
+        <h2 id="portalTitle" class="text-2xl font-bold text-white">Applicant Portal</h2>
+        <p id="portalSub" class="text-sm text-slate-400 mt-1">Sign in to track and manage your job pipeline</p>
+      </div>
+
+      <!-- ERROR / SUCCESS MESSAGE ALERT -->
+      <div id="authAlert" class="hidden text-xs rounded-lg p-3 mb-4 flex items-center gap-2">
+        <i id="authAlertIcon" class="fa-solid fa-triangle-exclamation"></i>
+        <span id="authAlertMsg">Invalid Username or Password. Access denied.</span>
+      </div>
+
+      <!-- LOGIN / SIGN-UP FORM -->
+      <form id="authForm" class="space-y-4" onsubmit="handleAuth(event)">
+        <div id="fullNameContainer" class="hidden">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Full Name</label>
+          <input type="text" id="authFullName" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="John Doe">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Username</label>
+          <input type="text" id="authEmail" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Username">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Password</label>
+          <input type="password" id="authPassword" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="••••••••">
+        </div>
+
+        <div id="confirmPasswordContainer" class="hidden">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Confirm Password</label>
+          <input type="password" id="authConfirmPassword" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="••••••••">
+        </div>
+
+        <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-medium py-2.5 rounded-lg transition-colors mt-2 flex items-center justify-center gap-2 shadow-lg shadow-amber-900/20">
+          <i id="authSubmitIcon" class="fa-solid fa-lock"></i>
+          <span id="authSubmitText">Sign In as Applicant</span>
+        </button>
+      </form>
+
+      <!-- SIGN UP TOGGLE FOOTER -->
+      <div id="signUpFooter" class="mt-4 pt-4 border-t border-slate-700/50 text-center">
+        <p id="signUpToggleText" class="text-xs text-slate-400">
+          Don't have an account? 
+          <button onclick="toggleSignUpState(true)" class="text-amber-400 hover:underline font-semibold ml-1">Create Account</button>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <div id="mainApp" class="hidden flex-1 flex flex-col">
+    <!-- NAVBAR -->
+    <header class="bg-slate-800/80 border-b border-slate-700 backdrop-blur sticky top-0 z-30 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 font-bold text-lg">
+          <i class="fa-solid fa-briefcase"></i>
+        </div>
+        <span class="font-bold text-lg tracking-wide text-white">PipelineHub</span>
+        <span id="roleBadge" class="text-xs px-2.5 py-0.5 rounded-full font-semibold uppercase tracking-wider bg-amber-500/20 text-amber-400 border border-amber-500/30">Applicant Workspace</span>
+      </div>
+
+      <div class="flex items-center space-x-3 md:space-x-4 overflow-x-auto">
+        <!-- Navigation Tabs -->
+        <button id="navDashboard" onclick="switchTab('dashboard')" class="text-sm font-medium text-amber-400 border-b-2 border-amber-400 pb-1 whitespace-nowrap">Dashboard</button>
+        <button id="navCompanies" onclick="switchTab('companies')" class="text-sm font-medium text-slate-400 hover:text-white pb-1 whitespace-nowrap">Companies</button>
+        <button id="navAdminUsers" onclick="switchTab('adminUsers')" class="text-sm font-medium text-slate-400 hover:text-white pb-1 whitespace-nowrap admin-only hidden">Applicant DB</button>
+        <button id="navAdminDB" onclick="switchTab('adminDB')" class="text-sm font-medium text-slate-400 hover:text-white pb-1 whitespace-nowrap admin-only hidden">Admin DB</button>
+        <button id="navAdminSettings" onclick="switchTab('adminSettings')" class="text-sm font-medium text-slate-400 hover:text-white pb-1 whitespace-nowrap admin-only hidden">Admin Settings</button>
+
+        <div class="h-4 w-px bg-slate-700"></div>
+
+        <span class="text-sm text-slate-300 flex items-center gap-1.5 whitespace-nowrap">
+          <i id="userRoleIcon" class="fa-solid fa-user text-amber-400"></i>
+          <span id="currentUserDisplay">User Account</span>
+        </span>
+        <button onclick="handleLogout()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white px-3 py-1.5 rounded-lg border border-slate-600 transition">
+          Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN DASHBOARD TAB -->
+    <main id="tabDashboard" class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-white">Job Application Console</h1>
+          <p class="text-sm text-slate-400">Track, create, edit, or manage pipeline records.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- EXPORT BUTTONS -->
+          <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
+            <button onclick="exportToCSV()" title="Export Applications to CSV" class="px-3 py-1.5 rounded bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-file-csv"></i> CSV
+            </button>
+            <button onclick="exportToJSON()" title="Export Applications to JSON" class="px-3 py-1.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 text-xs font-semibold flex items-center gap-1.5 transition ml-1">
+              <i class="fa-solid fa-file-code"></i> JSON
+            </button>
+            <label class="px-3 py-1.5 rounded bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition ml-1 cursor-pointer" title="Import JSON Applications Backup">
+              <i class="fa-solid fa-file-import"></i> Import
+              <input type="file" id="importJsonInput" accept=".json" onchange="importFromJSON(event)" class="hidden">
+            </label>
+          </div>
+
+          <button onclick="openModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-medium px-4 py-2 rounded-lg text-sm flex items-center space-x-2 transition shadow-lg shadow-amber-900/20">
+            <i class="fa-solid fa-plus"></i>
+            <span>New Application</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ANALYTICS CARDS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400 uppercase">Total Applications</p>
+            <h3 id="statTotal" class="text-2xl font-bold text-white mt-1">0</h3>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center text-lg"><i class="fa-solid fa-layer-group"></i></div>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400 uppercase">Interviews</p>
+            <h3 id="statInterview" class="text-2xl font-bold text-amber-400 mt-1">0</h3>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center text-lg"><i class="fa-solid fa-comments"></i></div>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400 uppercase">Offers</p>
+            <h3 id="statOffer" class="text-2xl font-bold text-emerald-400 mt-1">0</h3>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg"><i class="fa-solid fa-trophy"></i></div>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400 uppercase">Rejected</p>
+            <h3 id="statRejected" class="text-2xl font-bold text-rose-400 mt-1">0</h3>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center text-lg"><i class="fa-solid fa-xmark"></i></div>
+        </div>
+      </div>
+
+      <!-- CHART CONTAINER -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-5">
+        <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4">Pipeline Analytics</h2>
+        <div class="h-48 w-full">
+          <canvas id="pipelineChart"></canvas>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="bg-slate-800/90 text-xs text-slate-400 uppercase border-b border-slate-700">
+              <tr>
+                <th class="px-6 py-3.5">Company & Role</th>
+                <th class="px-6 py-3.5">Date Applied</th>
+                <th class="px-6 py-3.5">Status</th>
+                <th class="px-6 py-3.5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="appTableBody" class="divide-y divide-slate-700/50">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <!-- COMPANIES DIRECTORY TAB -->
+    <main id="tabCompanies" class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6 hidden">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+            <span>Companies Directory</span>
+            <span id="companyCountBadge" class="bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs px-2.5 py-0.5 rounded-full font-medium">11 Companies</span>
+          </h1>
+          <p class="text-sm text-slate-400">Explore target Tech Giants, IT Services MNCs, and apply directly.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="relative w-full sm:w-64">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="companySearch" oninput="filterCompanies()" placeholder="Search companies, tech..." class="w-full bg-slate-800 border border-slate-700 rounded-lg pl-8 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500">
+          </div>
+
+          <select id="companyDomainFilter" onchange="filterCompanies()" class="bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500">
+            <option value="ALL">All Domains</option>
+            <option value="Big Tech / Cloud">Big Tech / Cloud</option>
+            <option value="IT Services / Consulting">IT Services & Consulting</option>
+            <option value="E-Commerce / Cloud">E-Commerce / Cloud</option>
+          </select>
+
+          <select id="companyStatusFilter" onchange="filterCompanies()" class="bg-slate-800 border border-slate-700 text-slate-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500">
+            <option value="ALL">All Hiring Status</option>
+            <option value="Actively Hiring">Actively Hiring</option>
+            <option value="Selective Hiring">Selective Hiring</option>
+          </select>
+
+          <div class="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
+            <button id="viewGridBtn" onclick="toggleCompanyView('grid')" class="px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold flex items-center gap-1.5">
+              <i class="fa-solid fa-grid-2"></i> Grid
+            </button>
+            <button id="viewTableBtn" onclick="toggleCompanyView('table')" class="px-2.5 py-1 rounded text-slate-400 hover:text-white text-xs font-semibold flex items-center gap-1.5">
+              <i class="fa-solid fa-list"></i> Table
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="companyGridView" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+
+      <div id="companyTableView" class="hidden bg-slate-800/60 border border-slate-700/80 rounded-xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="bg-slate-800/90 text-xs text-slate-400 uppercase border-b border-slate-700">
+              <tr>
+                <th class="px-6 py-3.5">Company</th>
+                <th class="px-6 py-3.5">Domain</th>
+                <th class="px-6 py-3.5">Headquarters</th>
+                <th class="px-6 py-3.5">Key Tech Stack</th>
+                <th class="px-6 py-3.5">Hiring Status</th>
+                <th class="px-6 py-3.5 text-right">Quick Apply</th>
+              </tr>
+            </thead>
+            <tbody id="companyTableBody" class="divide-y divide-slate-700/50"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <!-- APPLICANT DATABASE TAB (ADMIN ONLY) -->
+    <main id="tabAdminUsers" class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6 hidden admin-only">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-white">Applicant Profile Database</h1>
+          <p class="text-sm text-slate-400">Search and view detailed applicant profiles, skill sets, and application history.</p>
+        </div>
+        <div class="w-full sm:w-auto flex items-center gap-2">
+          <input type="text" id="applicantSearch" oninput="filterApplicants()" placeholder="Search by name, role, skills..." class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500 w-full sm:w-64">
+        </div>
+      </div>
+
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl overflow-hidden shadow-xl">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-slate-800/90 text-xs text-slate-400 uppercase border-b border-slate-700">
+            <tr>
+              <th class="px-6 py-3.5">Applicant Name & Contact</th>
+              <th class="px-6 py-3.5">Target Role</th>
+              <th class="px-6 py-3.5">Tech Stack & Skills</th>
+              <th class="px-6 py-3.5">Applications</th>
+              <th class="px-6 py-3.5 text-right">Details</th>
+            </tr>
+          </thead>
+          <tbody id="applicantTableBody" class="divide-y divide-slate-700/50"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- ADMIN DATABASE TAB (ADMIN ONLY) -->
+    <main id="tabAdminDB" class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6 hidden admin-only">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-white">Administrator & Superuser Database</h1>
+          <p class="text-sm text-slate-400">System admin accounts, access privileges, security logs, and role management.</p>
+        </div>
+        <div class="w-full sm:w-auto flex items-center gap-2">
+          <input type="text" id="adminSearch" oninput="filterAdmins()" placeholder="Search admin name or role..." class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500 w-full sm:w-64">
+        </div>
+      </div>
+
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl overflow-hidden shadow-xl">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="bg-slate-800/90 text-xs text-slate-400 uppercase border-b border-slate-700">
+            <tr>
+              <th class="px-6 py-3.5">Admin Account</th>
+              <th class="px-6 py-3.5">System Privilege</th>
+              <th class="px-6 py-3.5">Last Login</th>
+              <th class="px-6 py-3.5">Managed Pipeline</th>
+              <th class="px-6 py-3.5 text-right">Details</th>
+            </tr>
+          </thead>
+          <tbody id="adminTableBody" class="divide-y divide-slate-700/50"></tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- ADMIN SETTINGS & SECURITY TAB (ADMIN ONLY) -->
+    <main id="tabAdminSettings" class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6 hidden admin-only">
+      <div>
+        <h1 class="text-2xl font-bold text-white">Admin Security & Settings</h1>
+        <p class="text-sm text-slate-400">Change system credentials, manage access controls, and security policies.</p>
+      </div>
+
+      <div id="settingsAlert" class="hidden p-4 rounded-xl text-sm font-medium flex items-center gap-2"></div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-4">
+          <div class="flex items-center space-x-3 border-b border-slate-700 pb-3">
+            <div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold">
+              <i class="fa-solid fa-key"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-white">Change Admin Credentials</h3>
+              <p class="text-xs text-slate-400">Update username and password for future logins.</p>
+            </div>
+          </div>
+
+          <form onsubmit="updateAdminCredentials(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Admin Username</label>
+              <input type="text" id="newAdminUsername" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">New Password</label>
+              <input type="password" id="newAdminPassword" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="••••••••">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Confirm New Password</label>
+              <input type="password" id="confirmAdminPassword" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-2">
+              <i class="fa-solid fa-floppy-disk"></i> Save New Credentials
+            </button>
+          </form>
+        </div>
+
+        <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-6 space-y-4">
+          <div class="flex items-center space-x-3 border-b border-slate-700 pb-3">
+            <div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold">
+              <i class="fa-solid fa-sliders"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-white">System Security Preferences</h3>
+              <p class="text-xs text-slate-400">Configure global access behaviors and safety prompts.</p>
+            </div>
+          </div>
+
+          <div class="space-y-4 text-sm text-slate-300">
+            <div class="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+              <div>
+                <p class="font-medium text-white">Confirm Record Deletion</p>
+                <p class="text-xs text-slate-400">Prompt a confirmation dialog before deleting an application.</p>
+              </div>
+              <input type="checkbox" id="prefConfirmDelete" checked class="w-4 h-4 accent-amber-500">
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+              <div>
+                <p class="font-medium text-white">Read-Only Guest Mode</p>
+                <p class="text-xs text-slate-400">Restrict non-authenticated users to view-only mode.</p>
+              </div>
+              <input type="checkbox" id="prefGuestMode" checked class="w-4 h-4 accent-amber-500">
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+              <div>
+                <p class="font-medium text-white">Auto Session Timeout</p>
+                <p class="text-xs text-slate-400">Auto logout admin after 30 minutes of inactivity.</p>
+              </div>
+              <input type="checkbox" id="prefSessionTimeout" class="w-4 h-4 accent-amber-500">
+            </div>
+
+            <button onclick="saveSystemPreferences()" class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition flex items-center gap-2">
+              <i class="fa-solid fa-shield-halved"></i> Update System Policies
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- APPLICATION FORM MODAL -->
+  <div id="appModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-lg rounded-xl p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+        <h3 id="modalTitle" class="font-semibold text-white">Add Application</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="appForm" onsubmit="saveApplication(event)" class="space-y-4">
+        <input type="hidden" id="appId">
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Company Name</label>
+          <input type="text" id="company" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="e.g. Google, TCS, Microsoft">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Job Title</label>
+          <input type="text" id="jobTitle" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="e.g. Software Engineer, Backend Lead">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Status</label>
+            <select id="status" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+              <option value="SAVED">Saved</option>
+              <option value="APPLIED">Applied</option>
+              <option value="INTERVIEW">Interview</option>
+              <option value="OFFER">Offer</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Date Applied</label>
+            <input type="date" id="dateApplied" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-3 border-t border-slate-700 pt-3">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 bg-slate-700 text-slate-300 rounded-lg text-sm">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-sm font-medium">Save Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // AUTHENTICATION & ROLE STATE
+    let authMode = 'user'; // 'user' or 'admin'
+    let isSignUpState = false;
+    let loggedInUser = localStorage.getItem('loggedInUser') || null;
+    let userRole = localStorage.getItem('userRole') || null; // 'user' or 'admin'
+
+    // USER ACCOUNTS DATABASE IN LOCALSTORAGE
+    let registeredUsers = JSON.parse(localStorage.getItem('registeredUsers')) || {
+      'user': { password: 'user123', fullName: 'Default Applicant' }
+    };
+
+    let adminUsername = localStorage.getItem('adminUsername') || 'admin';
+    let adminPassword = localStorage.getItem('adminPassword') || 'adminpassword';
+
+    let chartInstance = null;
+    let companyViewMode = 'grid';
+
+    // EXPANDED COMPANIES DATASET
+    const companiesData = [
+      {
+        id: 'comp-1',
+        name: 'Google',
+        icon: 'fa-brands fa-google',
+        iconColor: 'text-red-400 bg-red-500/10 border-red-500/30',
+        domain: 'Big Tech / Cloud',
+        location: 'Mountain View, CA / Hyderabad, IN',
+        openings: 42,
+        techStack: ['Python', 'C++', 'Go', 'Kubernetes', 'TensorFlow', 'GCP'],
+        status: 'Actively Hiring',
+        website: 'https://careers.google.com'
+      },
+      {
+        id: 'comp-2',
+        name: 'Microsoft',
+        icon: 'fa-brands fa-microsoft',
+        iconColor: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+        domain: 'Big Tech / Cloud',
+        location: 'Redmond, WA / Bengaluru, IN',
+        openings: 38,
+        techStack: ['C#', '.NET Core', 'Azure', 'TypeScript', 'React', 'Python'],
+        status: 'Actively Hiring',
+        website: 'https://careers.microsoft.com'
+      },
+      {
+        id: 'comp-3',
+        name: 'Amazon',
+        icon: 'fa-brands fa-amazon',
+        iconColor: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+        domain: 'E-Commerce / Cloud',
+        location: 'Seattle, WA / Hyderabad, IN',
+        openings: 65,
+        techStack: ['Java', 'AWS', 'DynamoDB', 'Python', 'React', 'Docker'],
+        status: 'Actively Hiring',
+        website: 'https://amazon.jobs'
+      },
+      {
+        id: 'comp-4',
+        name: 'TCS (Tata Consultancy Services)',
+        icon: 'fa-solid fa-building-columns',
+        iconColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+        domain: 'IT Services / Consulting',
+        location: 'Mumbai, IN',
+        openings: 120,
+        techStack: ['Java', 'Spring Boot', 'Python', 'Angular', 'Oracle', 'Azure'],
+        status: 'Actively Hiring',
+        website: 'https://www.tcs.com/careers'
+      },
+      {
+        id: 'comp-5',
+        name: 'Infosys',
+        icon: 'fa-solid fa-network-wired',
+        iconColor: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
+        domain: 'IT Services / Consulting',
+        location: 'Bengaluru, IN',
+        openings: 95,
+        techStack: ['Java', 'Python', 'Microservices', 'React', 'AWS', 'SQL'],
+        status: 'Actively Hiring',
+        website: 'https://www.infosys.com/careers.html'
+      },
+      {
+        id: 'comp-6',
+        name: 'Wipro',
+        icon: 'fa-solid fa-laptop-code',
+        iconColor: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
+        domain: 'IT Services / Consulting',
+        location: 'Bengaluru, IN',
+        openings: 50,
+        techStack: ['Java', '.NET', 'Node.js', 'React', 'Cloud Native'],
+        status: 'Selective Hiring',
+        website: 'https://careers.wipro.com'
+      },
+      {
+        id: 'comp-7',
+        name: 'Accenture',
+        icon: 'fa-solid fa-chart-line',
+        iconColor: 'text-violet-400 bg-violet-500/10 border-violet-500/30',
+        domain: 'IT Services / Consulting',
+        location: 'Dublin, IE / Bengaluru, IN',
+        openings: 88,
+        techStack: ['Salesforce', 'SAP', 'Python', 'AWS', 'Full Stack JS'],
+        status: 'Actively Hiring',
+        website: 'https://www.accenture.com/careers'
+      },
+      {
+        id: 'comp-8',
+        name: 'Cognizant',
+        icon: 'fa-solid fa-cubes',
+        iconColor: 'text-sky-400 bg-sky-500/10 border-sky-500/30',
+        domain: 'IT Services / Consulting',
+        location: 'Teaneck, NJ / Chennai, IN',
+        openings: 72,
+        techStack: ['Java', 'Python', 'Spring', 'React', 'AWS', 'Docker'],
+        status: 'Actively Hiring',
+        website: 'https://www.cognizant.com/careers'
+      },
+      {
+        id: 'comp-9',
+        name: 'IBM',
+        icon: 'fa-solid fa-server',
+        iconColor: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30',
+        domain: 'Big Tech / Cloud',
+        location: 'Armonk, NY / Bengaluru, IN',
+        openings: 30,
+        techStack: ['Python', 'Red Hat OpenShift', 'AI/ML', 'Java', 'Kubernetes'],
+        status: 'Selective Hiring',
+        website: 'https://www.ibm.com/careers'
+      },
+      {
+        id: 'comp-10',
+        name: 'Capgemini',
+        icon: 'fa-solid fa-code-branch',
+        iconColor: 'text-teal-400 bg-teal-500/10 border-teal-500/30',
+        domain: 'IT Services / Consulting',
+        location: 'Paris, FR / Pune, IN',
+        openings: 60,
+        techStack: ['Java', 'DevOps', 'Angular', 'Python', 'Azure'],
+        status: 'Actively Hiring',
+        website: 'https://www.capgemini.com/careers'
+      },
+      {
+        id: 'comp-11',
+        name: 'Tech Mahindra',
+        icon: 'fa-solid fa-microchip',
+        iconColor: 'text-rose-400 bg-rose-500/10 border-rose-500/30',
+        domain: 'IT Services / Consulting',
+        location: 'Pune, IN',
+        openings: 45,
+        techStack: ['Telecom 5G', 'Java', 'Python', 'Cloud Solutions', 'React'],
+        status: 'Selective Hiring',
+        website: 'https://www.techmahindra.com/careers'
+      }
+    ];
+
+    let applicantsData = [
+      {
+        id: 101,
+        name: "Kunapareddy Syam Kumar",
+        email: "syamkumar@example.com",
+        targetRole: "Python / Django Developer",
+        education: "B.Tech Computer Science & Engineering",
+        skills: ["Python", "Django", "Django ORM", "HTMX", "Chart.js", "SQL", "AWS Academy"],
+        applications: [
+          { company: "Google", jobTitle: "Software Engineer", status: "INTERVIEW", dateApplied: "2026-09-15" },
+          { company: "Microsoft", jobTitle: "Django Backend Developer", status: "APPLIED", dateApplied: "2026-09-20" },
+          { company: "Amazon", jobTitle: "Cloud Architect Intern", status: "OFFER", dateApplied: "2026-08-10" },
+          { company: "TCS (Tata Consultancy Services)", jobTitle: "Systems Engineer", status: "SAVED", dateApplied: "2026-10-01" }
+        ]
+      }
+    ];
+
+    let adminsData = [
+      {
+        id: 201,
+        username: adminUsername,
+        fullName: "System Administrator",
+        email: "admin@pipelinehub.io",
+        privilege: "SUPERADMIN",
+        lastLogin: "Today, 10:30 AM",
+        managedCandidates: 1
+      }
+    ];
+
+    let defaultApps = applicantsData[0].applications.map((app, idx) => ({ id: idx + 1, ...app }));
+    let applications = JSON.parse(localStorage.getItem('apps')) || defaultApps;
+
+    window.onload = () => {
+      document.getElementById('newAdminUsername').value = adminUsername;
+
+      if (loggedInUser && userRole) {
+        showApp();
+      } else {
+        showAuth();
+      }
+    };
+
+    function toggleAuthMode(mode) {
+      authMode = mode;
+      toggleSignUpState(false);
+
+      const userBtn = document.getElementById('tabUserAuth');
+      const adminBtn = document.getElementById('tabAdminAuth');
+      const icon = document.getElementById('portalIcon');
+      const title = document.getElementById('portalTitle');
+      const sub = document.getElementById('portalSub');
+      const submitText = document.getElementById('authSubmitText');
+      const signUpFooter = document.getElementById('signUpFooter');
+
+      if (mode === 'user') {
+        userBtn.className = "flex-1 py-2 text-xs font-bold rounded-lg transition bg-amber-500 text-slate-950 shadow";
+        adminBtn.className = "flex-1 py-2 text-xs font-bold text-slate-400 rounded-lg transition hover:text-white";
+        icon.innerHTML = '<i class="fa-solid fa-user text-2xl"></i>';
+        title.innerText = 'Applicant Portal';
+        sub.innerText = 'Sign in to track and manage your job pipeline';
+        submitText.innerText = 'Sign In as Applicant';
+        signUpFooter.classList.remove('hidden');
+      } else {
+        adminBtn.className = "flex-1 py-2 text-xs font-bold rounded-lg transition bg-amber-500 text-slate-950 shadow";
+        userBtn.className = "flex-1 py-2 text-xs font-bold text-slate-400 rounded-lg transition hover:text-white";
+        icon.innerHTML = '<i class="fa-solid fa-shield-halved text-2xl"></i>';
+        title.innerText = 'Admin Portal';
+        sub.innerText = 'Sign in with Administrator credentials to continue';
+        submitText.innerText = 'Secure Admin Login';
+        signUpFooter.classList.add('hidden');
+      }
+      hideAlert();
+    }
+
+    function toggleSignUpState(isSignUp) {
+      isSignUpState = isSignUp;
+      const fullNameContainer = document.getElementById('fullNameContainer');
+      const confirmPasswordContainer = document.getElementById('confirmPasswordContainer');
+      const title = document.getElementById('portalTitle');
+      const sub = document.getElementById('portalSub');
+      const submitText = document.getElementById('authSubmitText');
+      const submitIcon = document.getElementById('authSubmitIcon');
+      const signUpToggleText = document.getElementById('signUpToggleText');
+
+      if (isSignUp) {
+        fullNameContainer.classList.remove('hidden');
+        confirmPasswordContainer.classList.remove('hidden');
+        document.getElementById('authFullName').setAttribute('required', 'true');
+        document.getElementById('authConfirmPassword').setAttribute('required', 'true');
+        title.innerText = 'Create Account';
+        sub.innerText = 'Register to start tracking your job applications';
+        submitText.innerText = 'Register & Sign In';
+        submitIcon.className = 'fa-solid fa-user-plus';
+        signUpToggleText.innerHTML = 'Already have an account? <button onclick="toggleSignUpState(false)" class="text-amber-400 hover:underline font-semibold ml-1">Sign In</button>';
+      } else {
+        fullNameContainer.classList.add('hidden');
+        confirmPasswordContainer.classList.add('hidden');
+        document.getElementById('authFullName').removeAttribute('required');
+        document.getElementById('authConfirmPassword').removeAttribute('required');
+        title.innerText = authMode === 'user' ? 'Applicant Portal' : 'Admin Portal';
+        sub.innerText = authMode === 'user' ? 'Sign in to track and manage your job pipeline' : 'Sign in with Administrator credentials to continue';
+        submitText.innerText = authMode === 'user' ? 'Sign In as Applicant' : 'Secure Admin Login';
+        submitIcon.className = 'fa-solid fa-lock';
+        signUpToggleText.innerHTML = 'Don\'t have an account? <button onclick="toggleSignUpState(true)" class="text-amber-400 hover:underline font-semibold ml-1">Create Account</button>';
+      }
+      hideAlert();
+    }
+
+    function handleAuth(e) {
+      e.preventDefault();
+      const user = document.getElementById('authEmail').value.trim();
+      const pass = document.getElementById('authPassword').value;
+
+      if (isSignUpState && authMode === 'user') {
+        const fullName = document.getElementById('authFullName').value.trim();
+        const confirmPass = document.getElementById('authConfirmPassword').value;
+
+        if (registeredUsers[user]) {
+          showAlert("Username already exists. Please choose another username.", "bg-rose-500/10 text-rose-400 border border-rose-500/30", "fa-triangle-exclamation");
+          return;
+        }
+
+        if (pass !== confirmPass) {
+          showAlert("Passwords do not match. Please verify and try again.", "bg-rose-500/10 text-rose-400 border border-rose-500/30", "fa-triangle-exclamation");
+          return;
+        }
+
+        registeredUsers[user] = { password: pass, fullName: fullName };
+        localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+
+        loggedInUser = user;
+        userRole = 'user';
+        localStorage.setItem('loggedInUser', user);
+        localStorage.setItem('userRole', 'user');
+        
+        showApp();
+        return;
+      }
+
+      if (authMode === 'user') {
+        if (registeredUsers[user] && registeredUsers[user].password === pass) {
+          loggedInUser = user;
+          userRole = 'user';
+          localStorage.setItem('loggedInUser', user);
+          localStorage.setItem('userRole', 'user');
+          hideAlert();
+          showApp();
+        } else {
+          showAlert("Invalid User Credentials. Create an account or check password.", "bg-rose-500/10 text-rose-400 border border-rose-500/30", "fa-triangle-exclamation");
+        }
+      } else {
+        if (user === adminUsername && pass === adminPassword) {
+          loggedInUser = user;
+          userRole = 'admin';
+          localStorage.setItem('loggedInUser', user);
+          localStorage.setItem('userRole', 'admin');
+          hideAlert();
+          showApp();
+        } else {
+          showAlert("Invalid Admin Credentials. Check credentials and try again.", "bg-rose-500/10 text-rose-400 border border-rose-500/30", "fa-triangle-exclamation");
+        }
+      }
+    }
+
+    function showAlert(msg, classes, iconClass) {
+      const alertDiv = document.getElementById('authAlert');
+      const alertMsg = document.getElementById('authAlertMsg');
+      const alertIcon = document.getElementById('authAlertIcon');
+      alertDiv.className = `text-xs rounded-lg p-3 mb-4 flex items-center gap-2 ${classes}`;
+      alertIcon.className = `fa-solid ${iconClass}`;
+      alertMsg.innerText = msg;
+      alertDiv.classList.remove('hidden');
+    }
+
+    function hideAlert() {
+      document.getElementById('authAlert').classList.add('hidden');
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('loggedInUser');
+      localStorage.removeItem('userRole');
+      loggedInUser = null;
+      userRole = null;
+      showAuth();
+    }
+
+    function showAuth() {
+      document.getElementById('authOverlay').classList.remove('hidden');
+      document.getElementById('mainApp').classList.add('hidden');
+    }
+
+    function showApp() {
+      document.getElementById('authOverlay').classList.add('hidden');
+      document.getElementById('mainApp').classList.remove('hidden');
+
+      const userDisplay = document.getElementById('currentUserDisplay');
+      const roleBadge = document.getElementById('roleBadge');
+      const roleIcon = document.getElementById('userRoleIcon');
+      const adminElements = document.querySelectorAll('.admin-only');
+
+      if (userRole === 'admin') {
+        userDisplay.innerText = `${loggedInUser} (Admin)`;
+        roleBadge.innerText = 'Enterprise Console';
+        roleIcon.className = 'fa-solid fa-user-shield text-amber-400';
+        adminElements.forEach(el => el.classList.remove('hidden'));
+      } else {
+        const displayName = registeredUsers[loggedInUser]?.fullName || loggedInUser;
+        userDisplay.innerText = `${displayName}`;
+        roleBadge.innerText = 'Applicant Workspace';
+        roleIcon.className = 'fa-solid fa-user text-amber-400';
+        adminElements.forEach(el => el.classList.add('hidden'));
+      }
+
+      switchTab('dashboard');
+      renderTable();
+      renderCompanies();
+      renderApplicantsTable();
+      renderAdminsTable();
+      initChart();
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tabDashboard').classList.add('hidden');
+      document.getElementById('tabCompanies').classList.add('hidden');
+      document.getElementById('tabAdminUsers').classList.add('hidden');
+      document.getElementById('tabAdminDB').classList.add('hidden');
+      document.getElementById('tabAdminSettings').classList.add('hidden');
+
+      const tabs = ['Dashboard', 'Companies', 'AdminUsers', 'AdminDB', 'AdminSettings'];
+      tabs.forEach(t => {
+        const el = document.getElementById(`nav${t}`);
+        if (el) el.className = "text-sm font-medium text-slate-400 hover:text-white pb-1 whitespace-nowrap" + (el.classList.contains('admin-only') ? ' admin-only' : '');
+      });
+
+      if (tab === 'dashboard') {
+        document.getElementById('tabDashboard').classList.remove('hidden');
+        document.getElementById('navDashboard').className = "text-sm font-medium text-amber-400 border-b-2 border-amber-400 pb-1 whitespace-nowrap";
+      } else if (tab === 'companies') {
+        document.getElementById('tabCompanies').classList.remove('hidden');
+        document.getElementById('navCompanies').className = "text-sm font-medium text-amber-400 border-b-2 border-amber-400 pb-1 whitespace-nowrap";
+      } else if (tab === 'adminUsers' && userRole === 'admin') {
+        document.getElementById('tabAdminUsers').classList.remove('hidden');
+        document.getElementById('navAdminUsers').className = "text-sm font-medium text-amber-400 border-b-2 border-amber-400 pb-1 whitespace-nowrap admin-only";
+      } else if (tab === 'adminDB' && userRole === 'admin') {
+        document.getElementById('tabAdminDB').classList.remove('hidden');
+        document.getElementById('navAdminDB').className = "text-sm font-medium text-amber-400 border-b-2 border-amber-400 pb-1 whitespace-nowrap admin-only";
+      } else if (tab === 'adminSettings' && userRole === 'admin') {
+        document.getElementById('tabAdminSettings').classList.remove('hidden');
+        document.getElementById('navAdminSettings').className = "text-sm font-medium text-amber-400 border-b-2 border-amber-400 pb-1 whitespace-nowrap admin-only";
+      }
+    }
+
+    /* DATA EXPORT & IMPORT FUNCTIONS */
+    function exportToCSV() {
+      if (!applications || applications.length === 0) {
+        alert("No application data available to export.");
+        return;
+      }
+
+      const headers = ["ID", "Company", "Job Title", "Status", "Date Applied"];
+      const csvRows = [headers.join(",")];
+
+      applications.forEach(app => {
+        const row = [
+          app.id,
+          `"${(app.company || '').replace(/"/g, '""')}"`,
+          `"${(app.jobTitle || '').replace(/"/g, '""')}"`,
+          `"${app.status || ''}"`,
+          `"${app.dateApplied || ''}"`
+        ];
+        csvRows.push(row.join(","));
+      });
+
+      const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `job_applications_${loggedInUser || 'export'}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function exportToJSON() {
+      if (!applications || applications.length === 0) {
+        alert("No application data available to export.");
+        return;
+      }
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(applications, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `job_applications_backup_${loggedInUser || 'export'}_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function importFromJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          const importedData = JSON.parse(event.target.result);
+          if (Array.isArray(importedData)) {
+            applications = importedData;
+            saveData();
+            renderTable();
+            alert("Applications imported successfully!");
+          } else {
+            alert("Invalid JSON format. Expected an array of job application records.");
+          }
+        } catch (err) {
+          alert("Error parsing JSON file. Please check the file contents.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function renderCompanies() {
+      const search = document.getElementById('companySearch')?.value.toLowerCase() || '';
+      const domainFilter = document.getElementById('companyDomainFilter')?.value || 'ALL';
+      const statusFilter = document.getElementById('companyStatusFilter')?.value || 'ALL';
+
+      const filtered = companiesData.filter(comp => {
+        const matchesSearch = comp.name.toLowerCase().includes(search) || 
+                              comp.domain.toLowerCase().includes(search) ||
+                              comp.techStack.some(t => t.toLowerCase().includes(search));
+        const matchesDomain = domainFilter === 'ALL' || comp.domain === domainFilter;
+        const matchesStatus = statusFilter === 'ALL' || comp.status === statusFilter;
+        return matchesSearch && matchesDomain && matchesStatus;
+      });
+
+      document.getElementById('companyCountBadge').innerText = `${filtered.length} Companies`;
+
+      const gridContainer = document.getElementById('companyGridView');
+      gridContainer.innerHTML = '';
+      filtered.forEach(comp => {
+        const div = document.createElement('div');
+        div.className = "bg-slate-800/60 border border-slate-700/80 rounded-xl p-5 hover:border-slate-600 transition flex flex-col justify-between space-y-4 shadow-lg";
+        div.innerHTML = `
+          <div class="space-y-3">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-11 h-11 rounded-xl border flex items-center justify-center text-xl font-bold ${comp.iconColor}">
+                  <i class="${comp.icon}"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-white text-base leading-snug">${comp.name}</h3>
+                  <p class="text-xs text-slate-400">${comp.domain}</p>
+                </div>
+              </div>
+              <span class="text-[11px] font-medium px-2 py-0.5 rounded-full ${comp.status === 'Actively Hiring' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'}">
+                ${comp.status}
+              </span>
+            </div>
+
+            <div class="text-xs text-slate-400 space-y-1">
+              <p class="flex items-center gap-1.5"><i class="fa-solid fa-location-dot text-slate-500 w-3"></i> ${comp.location}</p>
+              <p class="flex items-center gap-1.5"><i class="fa-solid fa-briefcase text-slate-500 w-3"></i> <span class="text-amber-400 font-semibold">${comp.openings}+</span> Active Tech Openings</p>
+            </div>
+
+            <div>
+              <p class="text-[11px] font-semibold uppercase text-slate-400 mb-1.5">Tech Stack</p>
+              <div class="flex flex-wrap gap-1">
+                ${comp.techStack.map(t => `<span class="bg-slate-700/70 text-slate-300 text-[10px] px-2 py-0.5 rounded border border-slate-600/50">${t}</span>`).join('')}
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-700/50 flex items-center justify-between gap-2">
+            <a href="${comp.website}" target="_blank" class="text-xs text-slate-400 hover:text-amber-400 flex items-center gap-1 transition">
+              <span>Careers Page</span> <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            </a>
+            <button onclick="applyToCompany('${comp.name}')" class="bg-amber-600/90 hover:bg-amber-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+              <i class="fa-solid fa-plus"></i> Quick Apply
+            </button>
+          </div>
+        `;
+        gridContainer.appendChild(div);
+      });
+
+      const tableBody = document.getElementById('companyTableBody');
+      tableBody.innerHTML = '';
+      filtered.forEach(comp => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="px-6 py-4">
+            <div class="flex items-center space-x-3">
+              <div class="w-8 h-8 rounded-lg border flex items-center justify-center text-sm ${comp.iconColor}">
+                <i class="${comp.icon}"></i>
+              </div>
+              <span class="font-medium text-white">${comp.name}</span>
+            </div>
+          </td>
+          <td class="px-6 py-4 text-slate-300 text-xs">${comp.domain}</td>
+          <td class="px-6 py-4 text-slate-400 text-xs">${comp.location}</td>
+          <td class="px-6 py-4">
+            <div class="flex flex-wrap gap-1">
+              ${comp.techStack.slice(0, 4).map(t => `<span class="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded">${t}</span>`).join('')}
+            </div>
+          </td>
+          <td class="px-6 py-4">
+            <span class="text-[11px] font-medium px-2 py-0.5 rounded ${comp.status === 'Actively Hiring' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'}">
+              ${comp.status}
+            </span>
+          </td>
+          <td class="px-6 py-4 text-right">
+            <button onclick="applyToCompany('${comp.name}')" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition">
+              Apply Now
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    function filterCompanies() {
+      renderCompanies();
+    }
+
+    function toggleCompanyView(mode) {
+      companyViewMode = mode;
+      const grid = document.getElementById('companyGridView');
+      const table = document.getElementById('companyTableView');
+      const gridBtn = document.getElementById('viewGridBtn');
+      const tableBtn = document.getElementById('viewTableBtn');
+
+      if (mode === 'grid') {
+        grid.classList.remove('hidden');
+        table.classList.add('hidden');
+        gridBtn.className = "px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold flex items-center gap-1.5";
+        tableBtn.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white text-xs font-semibold flex items-center gap-1.5";
+      } else {
+        grid.classList.add('hidden');
+        table.classList.remove('hidden');
+        gridBtn.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white text-xs font-semibold flex items-center gap-1.5";
+        tableBtn.className = "px-2.5 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-semibold flex items-center gap-1.5";
+      }
+    }
+
+    function applyToCompany(companyName) {
+      openModal();
+      document.getElementById('company').value = companyName;
+      document.getElementById('jobTitle').value = 'Software Engineer';
+      document.getElementById('status').value = 'APPLIED';
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('dateApplied').value = today;
+    }
+
+    function updateAdminCredentials(e) {
+      e.preventDefault();
+      const user = document.getElementById('newAdminUsername').value.trim();
+      const pass = document.getElementById('newAdminPassword').value;
+      const confirmPass = document.getElementById('confirmAdminPassword').value;
+
+      if (pass !== confirmPass) {
+        showSettingsAlert("Passwords do not match. Please try again.", "bg-rose-500/10 text-rose-400 border border-rose-500/30");
+        return;
+      }
+
+      adminUsername = user;
+      adminPassword = pass;
+      localStorage.setItem('adminUsername', adminUsername);
+      localStorage.setItem('adminPassword', adminPassword);
+
+      showSettingsAlert("Admin credentials updated successfully! Use your new password on next login.", "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30");
+      document.getElementById('newAdminPassword').value = '';
+      document.getElementById('confirmAdminPassword').value = '';
+    }
+
+    function saveSystemPreferences() {
+      showSettingsAlert("System policies updated successfully.", "bg-blue-500/10 text-blue-400 border border-blue-500/30");
+    }
+
+    function showSettingsAlert(msg, classes) {
+      const alertDiv = document.getElementById('settingsAlert');
+      alertDiv.className = `p-4 rounded-xl text-sm font-medium flex items-center gap-2 ${classes}`;
+      alertDiv.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${msg}</span>`;
+      alertDiv.classList.remove('hidden');
+      setTimeout(() => alertDiv.classList.add('hidden'), 4000);
+    }
+
+    function renderApplicantsTable() {
+      const search = document.getElementById('applicantSearch')?.value.toLowerCase() || '';
+      const tbody = document.getElementById('applicantTableBody');
+      tbody.innerHTML = '';
+      applicantsData.forEach(applicant => {
+        if (search && !applicant.name.toLowerCase().includes(search) && !applicant.targetRole.toLowerCase().includes(search)) return;
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="px-6 py-4"><div class="font-medium text-white">${applicant.name}</div><div class="text-xs text-slate-400">${applicant.email}</div></td>
+          <td class="px-6 py-4 text-slate-300 font-medium">${applicant.targetRole}</td>
+          <td class="px-6 py-4"><div class="flex flex-wrap gap-1">${applicant.skills.map(s => `<span class="bg-slate-700 text-slate-300 text-[10px] px-2 py-0.5 rounded">${s}</span>`).join('')}</div></td>
+          <td class="px-6 py-4"><span class="bg-blue-500/10 text-blue-400 border border-blue-500/30 text-xs px-2.5 py-1 rounded font-semibold">${applicant.applications.length} Apps</span></td>
+          <td class="px-6 py-4 text-right"><span class="text-xs text-slate-500">Active</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterApplicants() {
+      renderApplicantsTable();
+    }
+
+    function renderAdminsTable() {
+      const tbody = document.getElementById('adminTableBody');
+      tbody.innerHTML = '';
+      adminsData[0].username = adminUsername;
+      adminsData.forEach(adm => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="px-6 py-4"><div class="font-medium text-white">${adm.fullName} (${adm.username})</div><div class="text-xs text-slate-400">${adm.email}</div></td>
+          <td class="px-6 py-4"><span class="bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs px-2.5 py-1 rounded-md font-semibold">${adm.privilege}</span></td>
+          <td class="px-6 py-4 text-slate-300 text-xs">${adm.lastLogin}</td>
+          <td class="px-6 py-4 text-slate-300 text-xs font-semibold">${adm.managedCandidates} Candidate Managed</td>
+          <td class="px-6 py-4 text-right"><span class="text-xs text-emerald-400 font-medium">Active Admin</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterAdmins() {
+      renderAdminsTable();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('appTableBody');
+      tbody.innerHTML = '';
+      applications.forEach(app => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="px-6 py-4"><div class="font-medium text-white">${app.company}</div><div class="text-xs text-slate-400">${app.jobTitle}</div></td>
+          <td class="px-6 py-4 text-slate-400">${app.dateApplied}</td>
+          <td class="px-6 py-4">
+            <select onchange="updateStatus(${app.id}, this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+              <option value="SAVED" ${app.status === 'SAVED' ? 'selected' : ''}>Saved</option>
+              <option value="APPLIED" ${app.status === 'APPLIED' ? 'selected' : ''}>Applied</option>
+              <option value="INTERVIEW" ${app.status === 'INTERVIEW' ? 'selected' : ''}>Interview</option>
+              <option value="OFFER" ${app.status === 'OFFER' ? 'selected' : ''}>Offer</option>
+              <option value="REJECTED" ${app.status === 'REJECTED' ? 'selected' : ''}>Rejected</option>
+            </select>
+          </td>
+          <td class="px-6 py-4 text-right space-x-2">
+            <button onclick="editApp(${app.id})" class="text-slate-400 hover:text-blue-400"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button onclick="deleteApp(${app.id})" class="text-slate-400 hover:text-rose-400"><i class="fa-solid fa-trash"></i></button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      updateStats();
+    }
+
+    function updateStatus(id, newStatus) {
+      const app = applications.find(a => a.id === id);
+      if (app) {
+        app.status = newStatus;
+        saveData();
+        updateStats();
+      }
+    }
+
+    function updateStats() {
+      const counts = { SAVED: 0, APPLIED: 0, INTERVIEW: 0, OFFER: 0, REJECTED: 0 };
+      applications.forEach(a => counts[a.status] = (counts[a.status] || 0) + 1);
+
+      document.getElementById('statTotal').innerText = applications.length;
+      document.getElementById('statInterview').innerText = counts.INTERVIEW || 0;
+      document.getElementById('statOffer').innerText = counts.OFFER || 0;
+      document.getElementById('statRejected').innerText = counts.REJECTED || 0;
+
+      if (chartInstance) {
+        chartInstance.data.datasets[0].data = [counts.SAVED, counts.APPLIED, counts.INTERVIEW, counts.OFFER, counts.REJECTED];
+        chartInstance.update();
+      }
+    }
+
+    function initChart() {
+      const ctx = document.getElementById('pipelineChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Saved', 'Applied', 'Interview', 'Offer', 'Rejected'],
+          datasets: [{
+            label: 'Applications',
+            data: [0, 0, 0, 0, 0],
+            backgroundColor: ['#64748b', '#3b82f6', '#f59e0b', '#10b981', '#f43f5e'],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
+            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', stepSize: 1 } }
+          }
+        }
+      });
+      updateStats();
+    }
+
+    function openModal() {
+      document.getElementById('appForm').reset();
+      document.getElementById('appId').value = '';
+      document.getElementById('modalTitle').innerText = 'Add Application';
+      document.getElementById('appModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('appModal').classList.add('hidden');
+    }
+
+    function editApp(id) {
+      const app = applications.find(a => a.id === id);
+      if (app) {
+        document.getElementById('appId').value = app.id;
+        document.getElementById('company').value = app.company;
+        document.getElementById('jobTitle').value = app.jobTitle;
+        document.getElementById('status').value = app.status;
+        document.getElementById('dateApplied').value = app.dateApplied;
+        document.getElementById('modalTitle').innerText = 'Edit Application Record';
+        document.getElementById('appModal').classList.remove('hidden');
+      }
+    }
+
+    function saveApplication(e) {
+      e.preventDefault();
+      const id = document.getElementById('appId').value;
+      const appData = {
+        id: id ? parseInt(id) : Date.now(),
+        company: document.getElementById('company').value,
+        jobTitle: document.getElementById('jobTitle').value,
+        status: document.getElementById('status').value,
+        dateApplied: document.getElementById('dateApplied').value
+      };
+
+      if (id) {
+        const index = applications.findIndex(a => a.id === parseInt(id));
+        applications[index] = appData;
+      } else {
+        applications.push(appData);
+      }
+
+      saveData();
+      renderTable();
+      closeModal();
+      switchTab('dashboard');
+    }
+
+    function deleteApp(id) {
+      const confirmDel = document.getElementById('prefConfirmDelete').checked;
+      if (confirmDel && !confirm("Are you sure you want to delete this application record?")) {
+        return;
+      }
+      applications = applications.filter(a => a.id !== id);
+      saveData();
+      renderTable();
+    }
+
+    function saveData() {
+      localStorage.setItem('apps', JSON.stringify(applications));
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "company": "Google",
+    "jobTitle": "Software Engineer",
+    "status": "OFFER",
+    "dateApplied": "2026-09-15"
+  },
+  {
+    "id": 2,
+    "company": "Microsoft",
+    "jobTitle": "Django Backend Developer",
+    "status": "OFFER",
+    "dateApplied": "2026-09-20"
+  },
+  {
+    "id": 3,
+    "company": "Amazon",
+    "jobTitle": "Cloud Architect Intern",
+    "status": "OFFER",
+    "dateApplied": "2026-08-10"
+  },
+  {
+    "id": 4,
+    "company": "TCS (Tata Consultancy Services)",
+    "jobTitle": "Systems Engineer",
+    "status": "SAVED",
+    "dateApplied": "2026-10-01"
+  }
+]

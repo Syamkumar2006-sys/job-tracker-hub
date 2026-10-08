@@ -1,0 +1,79 @@
+[
+  {
+    "id": "1",
+    "company": "Google",
+    "role": "Software Engineer II",
+    "date": "2026-09-15",
+    "status": "INTERVIEWING",
+    "salary": "$155,000",
+    "resume": "Resume_SWE_2026.pdf",
+    "url": "https://careers.google.com",
+    "notes": "System design round completed. Behavioral scheduled for next Tuesday."
+  },
+  {
+    "id": "2",
+    "company": "Amazon AWS",
+    "role": "Cloud Solutions Architect",
+    "date": "2026-09-20",
+    "status": "OFFER",
+    "salary": "$170,000",
+    "resume": "Resume_Cloud_AWS.pdf",
+    "url": "https://amazon.jobs",
+    "notes": "Official offer received! $170k base + stock options package."
+  },
+  {
+    "id": "3",
+    "company": "Meta",
+    "role": "Backend Python Engineer",
+    "date": "2026-09-02",
+    "status": "REJECTED",
+    "salary": "$160,000",
+    "resume": "Resume_Python_Meta.pdf",
+    "url": "https://metacareers.com",
+    "notes": "Automated rejection email received after initial resume screen."
+  },
+  {
+    "id": "4",
+    "company": "Stripe",
+    "role": "Full Stack Django Developer",
+    "date": "2026-09-28",
+    "status": "APPLIED",
+    "salary": "$145,000",
+    "resume": "Resume_Django_2026.pdf",
+    "url": "https://stripe.com/jobs",
+    "notes": "Applied via employee referral link from tech lead."
+  },
+  {
+    "id": "5",
+    "company": "DataDog",
+    "role": "DevOps / Observability Engineer",
+    "date": "2026-10-01",
+    "status": "SAVED",
+    "salary": "$140,000",
+    "resume": "Resume_DevOps.pdf",
+    "url": "https://datadoghq.com",
+    "notes": "Need to tailor resume experience towards Kubernetes monitoring."
+  },
+  {
+    "id": "6",
+    "company": "Netflix",
+    "role": "Senior Python Engineer",
+    "date": "2026-08-25",
+    "status": "INTERVIEWING",
+    "salary": "$185,000",
+    "resume": "Resume_Senior_Python.pdf",
+    "url": "https://jobs.netflix.com",
+    "notes": "Engineering Manager screening completed. Tech panel next."
+  },
+  {
+    "id": "7",
+    "company": "Airbnb",
+    "role": "Backend Software Engineer",
+    "date": "2026-08-10",
+    "status": "APPLIED",
+    "salary": "$150,000",
+    "resume": "Resume_Backend_General.pdf",
+    "url": "https://careers.airbnb.com",
+    "notes": "Applied directly on career site."
+  }
+]
